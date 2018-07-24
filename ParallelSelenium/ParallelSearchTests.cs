@@ -6,23 +6,26 @@ using NUnit.Framework;
 using ParallelSelenium.PageObjects.Bing;
 using ParallelSelenium.Utils;
 using System.Threading;
+using System.Collections.Generic;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Firefox;
 
 namespace ParallelSelenium
 {
-    [TestFixture("chrome", "60", "Windows 10")]
-    [TestFixture("internet explorer", "11", "Windows 7")]
-    [TestFixture("firefox", "41", "Windows 7")]
-    [TestFixture("chrome", "30", "Windows 7")]
-    [TestFixture("internet explorer", "9", "Windows 7")]
-    [TestFixture("firefox", "30", "Windows 7")]
-    [TestFixture("chrome", "38", "Windows 7")]
-    [TestFixture("internet explorer", "10", "Windows 7")]
-    [TestFixture("firefox", "35", "Windows 7")]
+    [TestFixture("chrome", "66", "Windows 10")]
+    //[TestFixture("internet explorer", "11", "Windows 7")]
+    //[TestFixture("firefox", "41", "Windows 7")]
+    //[TestFixture("chrome", "30", "Windows 7")]
+    //[TestFixture("internet explorer", "9", "Windows 7")]
+    //[TestFixture("firefox", "30", "Windows 7")]
+    //[TestFixture("chrome", "38", "Windows 7")]
+    //[TestFixture("internet explorer", "10", "Windows 7")]
+    //[TestFixture("firefox", "35", "Windows 7")]
     [Parallelizable(ParallelScope.Children)]
     public class ParallelSearchTests
     {
 
-        ThreadLocal<IWebDriver> driver = new ThreadLocal<IWebDriver>();
+		ThreadLocal<CustomRemoteWebDriver> driver;
         private String browser;
         private String version;
         private String os;
@@ -32,6 +35,7 @@ namespace ParallelSelenium
             this.browser = browser;
             this.version = version;
             this.os = os;
+			driver = new ThreadLocal<CustomRemoteWebDriver>();
         }
 
         [SetUp]
@@ -46,36 +50,25 @@ namespace ParallelSelenium
             WebRequest.DefaultWebProxy = iProxy;
             */
             String seleniumUri = "http://{0}:{1}/wd/hub";
-            DesiredCapabilities capabilities = new DesiredCapabilities();
-            capabilities.SetCapability(CapabilityType.BrowserName, browser);
-            capabilities.SetCapability(CapabilityType.Version, version);
-            capabilities.SetCapability(CapabilityType.Platform, os);
-            //Sauce Connect setup.
-            //Requires a named tunnel.
-            if (Constants.tunnelId != null)
-            {
-                capabilities.SetCapability("tunnel-identifier", Constants.tunnelId);
-            }
-            if (Constants.buildTag != null)
-            {
-                capabilities.SetCapability("build", Constants.buildTag);
-            }
-            if (Constants.seleniumRelayPort != null && Constants.seleniumRelayHost != null)
-            {
-                seleniumUri = String.Format(seleniumUri, Constants.seleniumRelayHost, Constants.seleniumRelayPort);
-            }
-            else {
-                seleniumUri = "https://ondemand.saucelabs.com:443/wd/hub";
-            }
-            capabilities.SetCapability("username", Constants.sauceUser);
-            capabilities.SetCapability("accessKey", Constants.sauceKey);
-            capabilities.SetCapability("name",
-            String.Format("{0}:{1}: [{2}]",
-            TestContext.CurrentContext.Test.ClassName,
-            TestContext.CurrentContext.Test.MethodName,
-            TestContext.CurrentContext.Test.Properties.Get("Description")));
-            driver.Value = new CustomRemoteWebDriver(new Uri(seleniumUri), capabilities, TimeSpan.FromSeconds(600));
-            driver.Value.Manage().Timeouts().ImplicitlyWait(TimeSpan.FromSeconds(10));
+
+
+			Dictionary<string, object> sauceDict = new Dictionary<string, object>();
+			sauceDict.Add("username", Constants.sauceUser);
+			sauceDict.Add("accessKey", Constants.sauceKey);
+			sauceDict.Add("seleniumVersion", "3.11.0");
+			sauceDict.Add("name", TestContext.CurrentContext.Test.Name);
+
+			DesiredCapabilities caps = new DesiredCapabilities();
+			caps.SetCapability("browserVersion", "60");
+			caps.SetCapability("browserName", "firefox");
+			caps.SetCapability("platformName", "Windows 10");
+			caps.SetCapability("sauce:options", sauceDict);
+
+
+            seleniumUri = "https://ondemand.saucelabs.com:443/wd/hub";
+
+			driver.Value = new CustomRemoteWebDriver(new Uri(seleniumUri), caps, TimeSpan.FromSeconds(600));
+            //driver.Value.Manage().Timeouts().ImplicitlyWait(TimeSpan.FromSeconds(10));
         }
 
         [Test, Property("Description", "Searching for \"hello!\" on Bing.")]
